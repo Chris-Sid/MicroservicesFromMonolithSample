@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option csharp_namespace = "AuthService.Protos";
+
+service Auth {
+  rpc ValidateToken (TokenRequest) returns (TokenResponse);
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message TokenResponse {
+  bool isValid = 1;
+}

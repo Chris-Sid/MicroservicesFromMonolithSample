@@ -1,0 +1,6 @@
+@MicroservicesFromMonolithSample_HostAddress = http://localhost:5141
+
+GET {{MicroservicesFromMonolithSample_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
