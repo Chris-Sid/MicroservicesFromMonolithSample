@@ -8,12 +8,12 @@ using SharedFunctionalities.DTOs.Address;
 namespace AddressService.API.Controllers
 {
     [Route("api/dms/addresses/")]
-    public class GetAddress : Controller
+    public class AddressController : ControllerBase
     {
         private readonly IAddressService _addressService;
         private readonly IConfiguration _configuration;
 
-        public GetAddress(IAddressService addressService, IConfiguration configuration)
+        public AddressController(IAddressService addressService, IConfiguration configuration)
         {
             _addressService = addressService;
             _configuration = configuration;
@@ -21,7 +21,7 @@ namespace AddressService.API.Controllers
 
         [Authorize]
         [HttpGet("api/dms/addresses/{internalId}")]
-        public async Task<IActionResult> Address(string internalId, [FromHeader] AddressRequestHeaders headers)
+        public async Task<IActionResult> Address(string internalId,AddressRequestHeaders headers)
         {
             var username = User.Identity?.Name;
 

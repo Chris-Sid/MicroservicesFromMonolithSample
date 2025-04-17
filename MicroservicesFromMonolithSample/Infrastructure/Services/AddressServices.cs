@@ -1,17 +1,18 @@
 ﻿using AddressService.Application.MockData;
 using SharedFunctionalities.DTOs.Address;
 using SharedFunctionalities.Helpers.Response;
+using System.Net.Http;
 
 namespace AddressService.Infrastructure.Services
 {
-    public class AddressService : IAddressService
+    public class AddressServices : IAddressService
     {
 
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClient;
         private readonly string _baseUrl;
-        public AddressService(IHttpClientFactory httpClient, string baseUrl)
+        public AddressServices(IHttpClientFactory httpClient, string baseUrl)
         {
-            _httpClient = httpClient.CreateClient();
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _baseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
         }
 
@@ -39,7 +40,7 @@ namespace AddressService.Infrastructure.Services
         public async Task<AddressDto> GetAddressAsync(DmsIdentifier addressRequest, AddressRequestHeaders headers, CancellationToken cancellationToken = default)
         {
             ValidateInputs(addressRequest, headers);
-
+            using (var client = _httpClient.CreateClient())
             using (var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/api/dms/addresses/{Uri.EscapeDataString(addressRequest.InternalId)}"))
             {
                 HeadersHelper.ConfigureHeaders(request, headers);
@@ -54,7 +55,7 @@ namespace AddressService.Infrastructure.Services
                         if (result != null)
                             return result;
                     }
-                    response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                    response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -69,7 +70,7 @@ namespace AddressService.Infrastructure.Services
         public async Task<AddressDto> PostAddressAsync(AddressDto addressRequest, AddressRequestHeaders headers, CancellationToken cancellationToken = default)
         {
             ValidateInputs(addressRequest.AddressId, headers);
-
+            using (var client = _httpClient.CreateClient())
             using (var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/api/dms/addresses/{addressRequest}"))
             {
                 HeadersHelper.ConfigureHeaders(request, headers);
@@ -77,8 +78,9 @@ namespace AddressService.Infrastructure.Services
                 HttpResponseMessage response;
                 try
                 {
-                    //return Mock Data if requestID="mock" and internalID == int1 || int2 || int3
-                    if (headers.RequestId == "mock" && MockAddressData.Addresses.Any(x => x.AddressId.InternalId.Equals(addressRequest.AddressId.InternalId)))
+                  
+                        //return Mock Data if requestID="mock" and internalID == int1 || int2 || int3
+                        if (headers.RequestId == "mock" && MockAddressData.Addresses.Any(x => x.AddressId.InternalId.Equals(addressRequest.AddressId.InternalId)))
                     {
                         var existing = MockAddressData.Addresses.FirstOrDefault(x =>
                    x.AddressId.InternalId.Equals(addressRequest.AddressId.InternalId, StringComparison.OrdinalIgnoreCase));
@@ -95,7 +97,7 @@ namespace AddressService.Infrastructure.Services
                         }
                         return addressRequest; // return the upserted address
                     }
-                    response = await _httpClient.PostAsync(_baseUrl, request.Content, cancellationToken);
+                    response = await client.PostAsync(_baseUrl, request.Content, cancellationToken);
                 }
                 catch (Exception ex)
                 {

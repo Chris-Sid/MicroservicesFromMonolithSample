@@ -1,3 +1,5 @@
+using AddressService.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SharedFunctionalities.DTOs.Address;
@@ -10,13 +12,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpClient();
+
+builder.Services.AddScoped<IAddressService, AddressServices>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    var baseUrl = "https://localhost:7093/swagger/index.html"; // Retrieve the value from appsettings.json or environment variables
+                                                               // var requestHeaders = new AddressRequestHeaders(); // If headers are default or empty
+    return new AddressServices(provider.GetRequiredService<IHttpClientFactory>(), baseUrl);
+});
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Address API",
-        Version = "v1"
-    });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Gateway API", Version = "v1" });
+ 
     // Optional: Customize schema for DmsIdentifier
     c.MapType<DmsIdentifier>(() => new Microsoft.OpenApi.Models.OpenApiSchema
     {
@@ -52,34 +60,41 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+
+var config = builder.Configuration;
+var jwtKey = config["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing");
+var jwtIssuer = config["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT Issuer is missing");
+var jwtAudience = config["Jwt:Audience"] ?? throw new InvalidOperationException("JWT Audience is missing");
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.IncludeErrorDetails = true;
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.Authority = "https://localhost:7214"; // AuthService URL
-        options.RequireHttpsMetadata = false; // Only for dev
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"]
-        };
-    });
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
 
 builder.Services.AddAuthorization();
 
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 app.Use(async (context, next) =>
 {
+    var authXHeader = context.Request.Headers["X-Authorization"].ToString();
+    var authHeader = context.Request.Headers["Authorization"].ToString();
+    var tokend = context.Request.Headers["Authorization"].FirstOrDefault();
     if (context.Request.Headers.TryGetValue("X-Authorization", out var token))
     {
         context.Request.Headers["Authorization"] = $"Bearer {token}";
@@ -87,7 +102,12 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseHttpsRedirection();
-
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.UseAuthentication();
 app.UseAuthorization();
 
