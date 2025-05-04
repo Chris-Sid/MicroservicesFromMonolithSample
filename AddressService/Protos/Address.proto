@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option csharp_namespace = "AddressServices.Protos";
+ 
+package address;
+
+message DmsIdentifier {
+  string internalId = 1;
+  string externalId = 2;
+}
+
+message AddressRequestHeaders {
+  string requestId = 1;
+  string acceptLanguage = 2;
+  string entityOwnerUserId = 3;
+  string entityOwnerCompanyId = 4;
+  string dimensionCompany = 5;
+  string dimensionLocation = 6;
+  string dimensionBranch = 7;
+  string dimensionMake = 8;
+  string dimensionMarketSegment = 9;
+  string timezoneOffset = 10;
+}
+
+message AddressRequest {
+  DmsIdentifier id = 1;
+  AddressRequestHeaders headers = 2;
+}
+
+message AddressDto {
+  DmsIdentifier addressId = 1;
+  string street = 2;
+  string city = 3;
+  string zip = 4;
+}
+
+service AddressGrpc {
+  rpc GetAddress (AddressRequest) returns (AddressDto);
+}

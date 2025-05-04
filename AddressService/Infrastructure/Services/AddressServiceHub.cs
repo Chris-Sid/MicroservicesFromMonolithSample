@@ -5,12 +5,12 @@ using System.Net.Http;
 
 namespace AddressService.Infrastructure.Services
 {
-    public class AddressServices : IAddressService
+    public class AddressServiceHub : IAddressService
     {
 
         private readonly IHttpClientFactory _httpClient;
         private readonly string _baseUrl;
-        public AddressServices(IHttpClientFactory httpClient, string baseUrl)
+        public AddressServiceHub(IHttpClientFactory httpClient, string baseUrl)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _baseUrl = baseUrl ?? throw new ArgumentNullException(nameof(baseUrl));
@@ -37,7 +37,7 @@ namespace AddressService.Infrastructure.Services
         /// <param name="x_TimezoneOffset">Timezone offset to handle datetimes</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async Task<AddressDto> GetAddressAsync(DmsIdentifier addressRequest, AddressRequestHeaders headers, CancellationToken cancellationToken = default)
+        public async Task<AddressDto> GetAddress(DmsIdentifier addressRequest, AddressRequestHeaders headers, CancellationToken cancellationToken = default)
         {
             ValidateInputs(addressRequest, headers);
             using (var client = _httpClient.CreateClient())

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.OpenApi.Models;
 using SharedFunctionalities.DTOs.Address;
 
@@ -9,6 +10,17 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(7235, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2; //Required for gRPC
+        listenOptions.UseHttps();
+    });
+});
+
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 

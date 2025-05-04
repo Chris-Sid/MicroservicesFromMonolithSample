@@ -1,5 +1,7 @@
+using AddressService;
 using AddressService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SharedFunctionalities.DTOs.Address;
@@ -14,13 +16,23 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpClient();
 
-builder.Services.AddScoped<IAddressService, AddressServices>(provider =>
+builder.Services.AddScoped<IAddressService, AddressServiceHub>(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
     var baseUrl = "https://localhost:7093/swagger/index.html"; // Retrieve the value from appsettings.json or environment variables
                                                                // var requestHeaders = new AddressRequestHeaders(); // If headers are default or empty
-    return new AddressServices(provider.GetRequiredService<IHttpClientFactory>(), baseUrl);
+    return new AddressServiceHub(provider.GetRequiredService<IHttpClientFactory>(), baseUrl);
 });
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(7001, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
+        listenOptions.UseHttps();
+    });
+});
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Gateway API", Version = "v1" });
@@ -84,7 +96,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
-
+builder.Services.AddGrpc();
 builder.Services.AddAuthorization();
 
 
@@ -108,6 +120,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.MapGrpcService<AddressGrpcService>();
 app.UseAuthentication();
 app.UseAuthorization();
 

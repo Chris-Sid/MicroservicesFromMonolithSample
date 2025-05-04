@@ -26,7 +26,7 @@ namespace AddressService.API.Controllers
             var username = User.Identity?.Name;
 
             // You can access headers.RequestId or other dimensions here
-            var address = await _addressService.GetAddressAsync(
+            var address = await _addressService.GetAddress(
                 new DmsIdentifier { InternalId = internalId }, headers);
             return Ok(address);
         }
